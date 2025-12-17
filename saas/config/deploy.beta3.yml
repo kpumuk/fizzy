@@ -1,0 +1,3 @@
+<% ENV["BETA_NUMBER"] = "3"; ERB.new(File.read("config/deploy.beta.yml"), trim_mode: 2).result.split("\n") do |line| %>
+<%= line %>
+<% end %>

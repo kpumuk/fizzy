@@ -1,15 +1,70 @@
+<%
+  raise "The BETA_NUMBER environment variable must be given" unless ENV["BETA_NUMBER"]
+  @data = {
+    "1" => {
+      "hosts" => {
+        "web" => ["fizzy-beta-app-101.df-iad-int.37signals.com"],
+        "jobs" => ["fizzy-beta-jobs-101.df-iad-int.37signals.com"],
+        "lb" => "fizzy-beta-lb-101.df-iad-int.37signals.com"
+      },
+      "dbs" => {
+        "solidqueue" => "fizzy-beta-solidqueue-db-101.df-iad-int.37signals.com"
+      }
+    },
+    "2" => {
+      "hosts" => {
+        "web" => ["fizzy-beta-app-102.df-iad-int.37signals.com"],
+        "jobs" => ["fizzy-beta-jobs-102.df-iad-int.37signals.com"],
+        "lb" => "fizzy-beta-lb-102.df-iad-int.37signals.com"
+      },
+      "dbs" => {
+        "solidqueue" => "fizzy-beta-solidqueue-db-102.df-iad-int.37signals.com"
+      }
+    },
+    "3" => {
+      "hosts" => {
+        "web" => ["fizzy-beta-app-103.df-iad-int.37signals.com"],
+        "jobs" => ["fizzy-beta-jobs-103.df-iad-int.37signals.com"],
+        "lb" => "fizzy-beta-lb-103.df-iad-int.37signals.com"
+      },
+      "dbs" => {
+        "solidqueue" => "fizzy-beta-solidqueue-db-103.df-iad-int.37signals.com"
+      }
+    },
+    "4" => {
+      "hosts" => {
+        "web" => ["fizzy-beta-app-104.df-iad-int.37signals.com"],
+        "jobs" => ["fizzy-beta-jobs-104.df-iad-int.37signals.com"],
+        "lb" => "fizzy-beta-lb-104.df-iad-int.37signals.com"
+      },
+      "dbs" => {
+        "solidqueue" => "fizzy-beta-solidqueue-db-104.df-iad-int.37signals.com"
+      }
+    }
+  }
+  @beta_number = ENV["BETA_NUMBER"]
+  raise "Beta #{@beta_number} doesn't appear to be defined" unless @data[@beta_number]
+
+  @web_hosts = @data[@beta_number]["hosts"]["web"]
+  @job_hosts = @data[@beta_number]["hosts"]["jobs"]
+  @lb_host = @data[@beta_number]["hosts"]["lb"]
+  @solidqueue_db = @data[@beta_number]["dbs"]["solidqueue"]
+%>
+
 retain_containers: 1
 
 servers:
   web:
     hosts:
-      - fizzy-beta-app-01.sc-chi-int.37signals.com: sc_chi
-      - fizzy-beta-app-101.df-iad-int.37signals.com: df_iad
+      - <%= @web_hosts[0] %>: df_iad
     labels:
       otel_scrape_enabled: true
 
-# we don't run the jobs role in beta
-allow_empty_roles: true
+  jobs:
+    hosts:
+      - <%= @job_hosts[0] %>: df_iad
+    labels:
+      otel_scrape_enabled: true
 
 proxy:
   ssl: false
@@ -23,8 +78,8 @@ env:
     MYSQL_DATABASE_HOST: fizzy-mysql-primary
     MYSQL_DATABASE_REPLICA_HOST: fizzy-mysql-replica
     MYSQL_SOLID_CABLE_HOST: fizzy-mysql-primary
-    MYSQL_SOLID_QUEUE_HOST: fizzy-mysql-primary
-    MYSQL_SOLID_CACHE_HOST: fizzy-beta-solidcache-db-101
+    MYSQL_SOLID_QUEUE_HOST: <%= @solidqueue_db %>
+    MYSQL_SOLID_CACHE_HOST: fizzy-beta-solidcache-db-101.df-iad-int.37signals.com
   secret:
     - RAILS_MASTER_KEY
     - MYSQL_ALTER_PASSWORD
@@ -49,14 +104,13 @@ env:
     - STRIPE_SECRET_KEY
     - STRIPE_WEBHOOK_SECRET
   tags:
-    sc_chi: {}
     df_iad:
       PRIMARY_DATACENTER: true
 
 accessories:
   load-balancer:
     image: basecamp/kamal-proxy:lb
-    host: fizzy-beta-lb-01.sc-chi-int.37signals.com
+    host: <%= @lb_host %>
     labels:
       otel_role: load-balancer
       otel_service: fizzy-load-balancer
